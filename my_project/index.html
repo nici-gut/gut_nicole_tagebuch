@@ -57,7 +57,14 @@
     </div>
 
     <script>
-      let token = null;
+      let token = localStorage.getItem("jwt"); // Token beim Laden auslesen
+
+      if (token) {
+        // Schon eingeloggt
+        document.getElementById("login").style.display = "none";
+        document.getElementById("todos").style.display = "block";
+        loadTodos();
+      }
 
       async function login() {
         const username = document.getElementById("username").value;
@@ -133,13 +140,20 @@
       async function toggleTodo(id) {
         const res = await fetch(`http://localhost:8000/todos/${id}`, {
           method: "PUT",
-          headers: { Authorization: "Bearer " + token },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
         });
 
-        const updatedTodo = await res.json();
-        console.log("Todo aktualisiert:", updatedTodo);
+        if (!res.ok) {
+          const error = await res.text();
+          console.error("Fehler beim Toggle:", res.status, error);
+          if (res.status === 401) alert("Bitte erneut einloggen.");
+          return;
+        }
 
-        // Liste neu laden, damit der Status angezeigt wird
+        await res.json();
         loadTodos();
       }
     </script>
