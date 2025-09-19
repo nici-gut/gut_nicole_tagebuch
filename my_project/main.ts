@@ -6,6 +6,18 @@ const app = new Application();
 const router = new Router();
 
 app.use(async (ctx, next) => {
+  ctx.response.headers.set("Access-Control-Allow-Origin", "*");
+  ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
+  if (ctx.request.method === "OPTIONS") {
+    ctx.response.status = 204;
+    return;
+  }
+  await next();
+});
+
+app.use(async (ctx, next) => {
   if (ctx.request.url.pathname.startsWith("/todos")) {
     const authHeader = ctx.request.headers.get("Authorization");
 

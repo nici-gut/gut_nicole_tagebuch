@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ToDo App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        background: #f9f9f9;
+      }
+      h1 {
+        color: #4a148c;
+      }
+      #login,
+      #todos {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: white;
+      }
+      input,
+      button {
+        padding: 0.5rem;
+        margin: 0.3rem 0;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        background: #eee;
+        margin: 0.2rem 0;
+        padding: 0.5rem;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Meine ToDo-Liste</h1>
+
+    <!-- Login -->
+    <div id="login">
+      <h2>Login</h2>
+      <input type="text" id="username" placeholder="Benutzername" />
+      <input type="password" id="password" placeholder="Passwort" />
+      <button onclick="login()">Einloggen</button>
+    </div>
+
+    <!-- ToDos -->
+    <div id="todos" style="display: none">
+      <h2>ToDos</h2>
+      <input type="text" id="newTodo" placeholder="Neue Aufgabe..." />
+      <button onclick="addTodo()">Hinzufügen</button>
+      <ul id="todoList"></ul>
+    </div>
+
+    <script>
+      let token = null;
+
+      async function login() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        const res = await fetch("http://localhost:8000/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json();
+        if (data.token) {
+          token = data.token;
+          localStorage.setItem("jwt", token); // speichern
+          document.getElementById("login").style.display = "none";
+          document.getElementById("todos").style.display = "block";
+          loadTodos();
+        } else {
+          alert("Login fehlgeschlagen");
+        }
+      }
+
+      async function loadTodos() {
+        const res = await fetch("http://localhost:8000/todos", {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        });
+        const todos = await res.json();
+        console.log("Todos vom Server:", todos);
+
+        const list = document.getElementById("todoList");
+        list.innerHTML = ""; // Liste leeren
+        todos.forEach((todo) => {
+          const li = document.createElement("li");
+          li.textContent = todo.title + (todo.done ? " ✅" : "");
+          list.appendChild(li);
+        });
+      }
+
+      async function addTodo() {
+        const text = document.getElementById("newTodo").value;
+
+        const res = await fetch("http://localhost:8000/todos", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ title: text }),
+        });
+
+        const newTodo = await res.json();
+        console.log("Antwort:", newTodo);
+
+        const li = document.createElement("li");
+        li.textContent = newTodo.title;
+        document.getElementById("todoList").appendChild(li);
+
+        document.getElementById("newTodo").value = "";
+      }
+    </script>
+  </body>
+</html>
