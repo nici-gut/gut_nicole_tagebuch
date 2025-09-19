@@ -149,6 +149,11 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1"
-    ]
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:jose@^5.9.6"
+      ]
+    }
   }
 }

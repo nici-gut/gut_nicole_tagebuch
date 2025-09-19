@@ -1,8 +1,34 @@
 import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
 import { Todo, readTodos, writeTodos } from "./todo.ts";
+import { createJWT, verifyJWT } from "./auth.ts";
 
 const app = new Application();
 const router = new Router();
+
+app.use(async (ctx, next) => {
+  if (ctx.request.url.pathname.startsWith("/todos")) {
+    const authHeader = ctx.request.headers.get("Authorization");
+
+    if (!authHeader) {
+      ctx.response.status = 401;
+      ctx.response.body = { error: "Token fehlt" }; // ← wichtig!
+      return;
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const payload = await verifyJWT(token);
+
+    if (!payload) {
+      ctx.response.status = 401;
+      ctx.response.body = { error: "Token ungültig" }; // ← wichtig!
+      return;
+    }
+
+    ctx.state.user = payload;
+  }
+
+  await next();
+});
 
 // Logging
 app.use(async (ctx, next) => {
@@ -50,11 +76,21 @@ router.delete("/todos/:id", async (ctx) => {
   ctx.response.body = { success: true };
 });
 
+// POST /login → Benutzer-Login
+router.post("/login", async (ctx) => {
+  const { username, password } = await ctx.request.body({ type: "json" }).value;
+  // Dummy-Check: Nutzername und Passwort sind fest im Code!
+  if (username === "admin" && password === "passwort") {
+    const token = await createJWT({ username });
+    ctx.response.body = { token };
+  } else {
+    ctx.response.status = 401;
+    ctx.response.body = { error: "Ungültige Zugangsdaten" };
+  }
+});
+
 app.use(router.routes());
 app.use(router.allowedMethods());
 
 console.log("Server läuft auf http://localhost:8000");
 await app.listen({ port: 8000 });
-
-
-
