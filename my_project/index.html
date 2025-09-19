@@ -83,18 +83,27 @@
 
       async function loadTodos() {
         const res = await fetch("http://localhost:8000/todos", {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
+          headers: { Authorization: "Bearer " + token },
         });
         const todos = await res.json();
-        console.log("Todos vom Server:", todos);
-
         const list = document.getElementById("todoList");
-        list.innerHTML = ""; // Liste leeren
+        list.innerHTML = "";
+
         todos.forEach((todo) => {
           const li = document.createElement("li");
-          li.textContent = todo.title + (todo.done ? " ✅" : "");
+          li.textContent = todo.title;
+          li.style.cursor = "pointer"; // Zeigt an, dass man klicken kann
+
+          if (todo.done) {
+            li.style.textDecoration = "line-through"; // erledigt durchstreichen
+            li.style.color = "#888";
+          }
+
+          // Klick-Event für Toggle
+          li.addEventListener("click", async () => {
+            await toggleTodo(todo.id);
+          });
+
           list.appendChild(li);
         });
       }
@@ -119,6 +128,19 @@
         document.getElementById("todoList").appendChild(li);
 
         document.getElementById("newTodo").value = "";
+      }
+
+      async function toggleTodo(id) {
+        const res = await fetch(`http://localhost:8000/todos/${id}`, {
+          method: "PUT",
+          headers: { Authorization: "Bearer " + token },
+        });
+
+        const updatedTodo = await res.json();
+        console.log("Todo aktualisiert:", updatedTodo);
+
+        // Liste neu laden, damit der Status angezeigt wird
+        loadTodos();
       }
     </script>
   </body>
