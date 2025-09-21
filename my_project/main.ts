@@ -1,4 +1,4 @@
-import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { Application, Router } from "oak";
 import { Todo, readTodos, writeTodos } from "./todo.ts";
 import { createJWT, verifyJWT } from "./auth.ts";
 
@@ -46,6 +46,21 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url}`);
   await next();
+});
+
+// Statische Dateien (Frontend) ausliefern
+app.use(async (ctx, next) => {
+  try {
+    // Versuche, die angeforderte Datei aus dem aktuellen Verzeichnis zu senden.
+    // Wenn der Pfad "/" ist, wird automatisch nach "index.html" gesucht.
+    await ctx.send({
+      root: `${Deno.cwd()}/`,
+      index: "index.html",
+    });
+  } catch {
+    // Wenn die Datei nicht gefunden wird, übergebe die Anfrage an die nächste Middleware (deine API-Routen).
+    await next();
+  }
 });
 
 // GET /todos → alle anzeigen
