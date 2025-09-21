@@ -1,10 +1,12 @@
-import { Application, Router } from "oak";
-import { Todo, readTodos, writeTodos } from "./todo.ts";
+import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+// Wir importieren unsere neuen Deno KV Funktionen
+import { Todo, getTodos, createTodo, updateTodo, deleteTodo } from "./todo.ts";
 import { createJWT, verifyJWT } from "./auth.ts";
 
 const app = new Application();
 const router = new Router();
 
+// CORS und OPTIONS Middleware (bleibt unverändert)
 app.use(async (ctx, next) => {
   ctx.response.headers.set("Access-Control-Allow-Origin", "*");
   ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -17,13 +19,14 @@ app.use(async (ctx, next) => {
   await next();
 });
 
+// Auth Middleware (bleibt unverändert)
 app.use(async (ctx, next) => {
   if (ctx.request.url.pathname.startsWith("/todos")) {
     const authHeader = ctx.request.headers.get("Authorization");
 
     if (!authHeader) {
       ctx.response.status = 401;
-      ctx.response.body = { error: "Token fehlt" }; // ← wichtig!
+      ctx.response.body = { error: "Token fehlt" };
       return;
     }
 
@@ -32,7 +35,7 @@ app.use(async (ctx, next) => {
 
     if (!payload) {
       ctx.response.status = 401;
-      ctx.response.body = { error: "Token ungültig" }; // ← wichtig!
+      ctx.response.body = { error: "Token ungültig" };
       return;
     }
 
@@ -42,51 +45,43 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// Logging
+// Logging (bleibt unverändert)
 app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url}`);
   await next();
 });
 
-// Statische Dateien (Frontend) ausliefern
+// Statische Dateien ausliefern (bleibt unverändert)
 app.use(async (ctx, next) => {
   try {
-    // Versuche, die angeforderte Datei aus dem aktuellen Verzeichnis zu senden.
-    // Wenn der Pfad "/" ist, wird automatisch nach "index.html" gesucht.
     await ctx.send({
       root: `${Deno.cwd()}/`,
       index: "index.html",
     });
   } catch {
-    // Wenn die Datei nicht gefunden wird, übergebe die Anfrage an die nächste Middleware (deine API-Routen).
     await next();
   }
 });
 
+
 // GET /todos → alle anzeigen
 router.get("/todos", async (ctx) => {
-  const todos = await readTodos();
+  const todos = await getTodos(); // Geändert
   ctx.response.body = todos;
 });
 
 // POST /todos → neues ToDo
 router.post("/todos", async (ctx) => {
   const body = await ctx.request.body({ type: "json" }).value;
-  const todos = await readTodos();
-  const newTodo: Todo = { id: Date.now(), title: body.title, done: false };
-  todos.push(newTodo);
-  await writeTodos(todos);
+  const newTodo = await createTodo(body.title); // Geändert
   ctx.response.body = newTodo;
 });
 
 // PUT /todos/:id → ToDo erledigt/unerledigt schalten
 router.put("/todos/:id", async (ctx) => {
-  const id = Number(ctx.params.id);
-  const todos = await readTodos();
-  const todo = todos.find((t) => t.id === id);
+  const { id } = ctx.params; // ID ist jetzt ein String
+  const todo = await updateTodo(id); // Geändert
   if (todo) {
-    todo.done = !todo.done;
-    await writeTodos(todos);
     ctx.response.body = todo;
   } else {
     ctx.response.status = 404;
@@ -96,17 +91,14 @@ router.put("/todos/:id", async (ctx) => {
 
 // DELETE /todos/:id → ToDo löschen
 router.delete("/todos/:id", async (ctx) => {
-  const id = Number(ctx.params.id);
-  let todos = await readTodos();
-  todos = todos.filter((t) => t.id !== id);
-  await writeTodos(todos);
+  const { id } = ctx.params; // ID ist jetzt ein String
+  await deleteTodo(id); // Geändert
   ctx.response.body = { success: true };
 });
 
-// POST /login → Benutzer-Login
+// Login (bleibt unverändert)
 router.post("/login", async (ctx) => {
   const { username, password } = await ctx.request.body({ type: "json" }).value;
-  // Dummy-Check: Nutzername und Passwort sind fest im Code!
   if (username === "admin" && password === "passwort") {
     const token = await createJWT({ username });
     ctx.response.body = { token };
