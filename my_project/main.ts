@@ -111,6 +111,10 @@ router.post("/login", async (ctx) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
+// HTTP Server starten
+console.log("Server läuft auf http://localhost:8000");
+await app.listen({ port: 8000 });
+
 /* HTTPS Server starten 
 
 console.log("Server läuft auf https://localhost:8000"); 
