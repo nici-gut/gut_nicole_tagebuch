@@ -111,9 +111,12 @@ router.post("/login", async (ctx) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
+/* HTTPS Server starten 
+
 console.log("Server läuft auf https://localhost:8000"); 
 await app.listen({
   port: 8000,
   cert: await Deno.readTextFile("./localhost.pem"),
   key: await Deno.readTextFile("./localhost-key.pem"),
 });
+*/
