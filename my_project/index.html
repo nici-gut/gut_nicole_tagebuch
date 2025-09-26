@@ -65,17 +65,22 @@
         margin-bottom: 0.5rem;
         color: #4a148c;
       }
-      .delete-btn {
-        background: #4a148c;
-        color: white;
-        border: none;
-        padding: 0.4rem 0.8rem;
-        border-radius: 5px;
-        cursor: pointer;
+      .actions {
+        display: flex;
+        gap: 0.5rem;
         margin-left: 1rem;
       }
+      .edit-btn {
+        background: #1e88e5;
+      }
+      .edit-btn:hover {
+        background: #1565c0;
+      }
+      .delete-btn {
+        background: #e53935;
+      }
       .delete-btn:hover {
-        background: #4a148c;
+        background: #c62828;
       }
     </style>
   </head>
@@ -117,6 +122,7 @@
       addEntryBtn.addEventListener("click", addEntry);
 
       async function login() {
+        // ( unverändert )
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
         try {
@@ -155,19 +161,27 @@
           entries.forEach((entry) => {
             const li = document.createElement("li");
             
-            // Inhalt des Eintrags
             const contentDiv = document.createElement("div");
             contentDiv.className = "content";
             contentDiv.innerHTML = `<strong>${entry.title}</strong><p>${entry.content}</p>`;
             
-            // Lösch-Button
+            const actionsDiv = document.createElement("div");
+            actionsDiv.className = "actions";
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "edit-btn";
+            editBtn.textContent = "Bearbeiten";
+            editBtn.onclick = () => toggleEdit(li, entry);
+            
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "delete-btn";
             deleteBtn.textContent = "Löschen";
             deleteBtn.onclick = () => deleteEntry(entry.id);
             
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(deleteBtn);
             li.appendChild(contentDiv);
-            li.appendChild(deleteBtn);
+            li.appendChild(actionsDiv);
             entryList.appendChild(li);
           });
         } catch (err) {
@@ -176,6 +190,7 @@
       }
 
       async function addEntry() {
+        // ( unverändert )
         const titleInput = document.getElementById("newEntryTitle");
         const contentInput = document.getElementById("newEntryContent");
         const title = titleInput.value.trim();
@@ -205,32 +220,75 @@
           console.error(err);
         }
       }
-
-      // **NEUE FUNKTION**
+      
       async function deleteEntry(id) {
+        // ( unverändert )
         if (!confirm("Bist du sicher, dass du diesen Eintrag löschen möchtest?")) {
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:8000/entries/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                if (res.status === 401) alert("Bitte erneut einloggen.");
+                return;
+            }
+            loadEntries();
+        } catch (err) {
+            console.error(err);
+        }
+      }
+
+      // **NEUE FUNKTIONEN FÜR DAS BEARBEITEN**
+      function toggleEdit(li, entry) {
+        const contentDiv = li.querySelector(".content");
+        const actionsDiv = li.querySelector(".actions");
+
+        // Erstelle Eingabefelder und fülle sie mit den aktuellen Daten
+        contentDiv.innerHTML = `
+            <input type="text" class="edit-title" value="${entry.title}" />
+            <textarea class="edit-content">${entry.content}</textarea>
+        `;
+
+        // Erstelle einen Speicher-Button
+        actionsDiv.innerHTML = ""; // Leere alte Buttons
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Speichern";
+        saveBtn.onclick = () => saveEntry(li, entry.id);
+        actionsDiv.appendChild(saveBtn);
+      }
+
+      async function saveEntry(li, id) {
+        const newTitle = li.querySelector(".edit-title").value.trim();
+        const newContent = li.querySelector(".edit-content").value.trim();
+
+        if (!newTitle || !newContent) {
+            alert("Titel und Inhalt dürfen nicht leer sein.");
             return;
         }
 
         try {
             const res = await fetch(`http://localhost:8000/entries/${id}`, {
-                method: 'DELETE',
+                method: 'PUT',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                body: JSON.stringify({ title: newTitle, content: newContent })
             });
 
             if (!res.ok) {
                 if (res.status === 401) alert("Bitte erneut einloggen.");
                 return;
             }
-
-            loadEntries(); // Liste neu laden, um den gelöschten Eintrag zu entfernen
-        } catch (err) {
+            
+            loadEntries(); // Lade die Liste neu, um die Änderungen anzuzeigen
+        } catch(err) {
             console.error(err);
         }
       }
-
     </script>
   </body>
 </html>
