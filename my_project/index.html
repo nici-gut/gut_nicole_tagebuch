@@ -10,12 +10,10 @@
         background: #f4f4f7;
         color: #333;
       }
-
       h1 {
         color: #4a148c;
         text-align: center;
       }
-
       .card {
         max-width: 600px;
         margin: 1rem auto;
@@ -24,7 +22,6 @@
         background: #fff;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
-
       input,
       textarea {
         width: 95%;
@@ -34,7 +31,6 @@
         border-radius: 6px;
         font-size: 1rem;
       }
-
       button {
         padding: 0.6rem 1rem;
         border: none;
@@ -45,33 +41,41 @@
         cursor: pointer;
         transition: background 0.2s;
       }
-
       button:hover {
         background: #6a1b9a;
       }
-
       ul {
         list-style: none;
         padding: 0;
       }
-
       li {
         background: #eee;
-        margin: 0.3rem 0;
-        padding: 0.6rem;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.2s;
+        margin: 0.5rem 0;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
       }
-
-      li:hover {
-        background: #ddd;
+      li .content {
+        flex-grow: 1;
       }
-      
       li strong {
         display: block;
         margin-bottom: 0.5rem;
         color: #4a148c;
+      }
+      .delete-btn {
+        background: #4a148c;
+        color: white;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 1rem;
+      }
+      .delete-btn:hover {
+        background: #4a148c;
       }
     </style>
   </head>
@@ -97,8 +101,6 @@
 
     <script>
       let token = localStorage.getItem("jwt");
-
-      // Elemente referenzieren
       const loginDiv = document.getElementById("login");
       const entriesDiv = document.getElementById("entries");
       const entryList = document.getElementById("entryList");
@@ -111,29 +113,18 @@
         loadEntries();
       }
 
-      // Login Button
-      loginBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        await login();
-      });
-
-      // Add Entry Button
-      addEntryBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        await addEntry();
-      });
+      loginBtn.addEventListener("click", login);
+      addEntryBtn.addEventListener("click", addEntry);
 
       async function login() {
         const username = document.getElementById("username").value;
         const password = document.getElementById("password").value;
-
         try {
           const res = await fetch("http://localhost:8000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password }),
           });
-
           const data = await res.json();
           if (data.token) {
             token = data.token;
@@ -155,20 +146,28 @@
           const res = await fetch("http://localhost:8000/entries", {
             headers: { Authorization: "Bearer " + token },
           });
-
           if (!res.ok) {
             if (res.status === 401) alert("Bitte erneut einloggen.");
             return;
           }
-
           const entries = await res.json();
           entryList.innerHTML = "";
-
           entries.forEach((entry) => {
             const li = document.createElement("li");
-            // **HIER IST DIE ÄNDERUNG:**
-            // Wir erstellen HTML, um Titel und Inhalt anzuzeigen.
-            li.innerHTML = `<strong>${entry.title}</strong><p>${entry.content}</p>`;
+            
+            // Inhalt des Eintrags
+            const contentDiv = document.createElement("div");
+            contentDiv.className = "content";
+            contentDiv.innerHTML = `<strong>${entry.title}</strong><p>${entry.content}</p>`;
+            
+            // Lösch-Button
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "delete-btn";
+            deleteBtn.textContent = "Löschen";
+            deleteBtn.onclick = () => deleteEntry(entry.id);
+            
+            li.appendChild(contentDiv);
+            li.appendChild(deleteBtn);
             entryList.appendChild(li);
           });
         } catch (err) {
@@ -179,7 +178,6 @@
       async function addEntry() {
         const titleInput = document.getElementById("newEntryTitle");
         const contentInput = document.getElementById("newEntryContent");
-
         const title = titleInput.value.trim();
         const content = contentInput.value.trim();
 
@@ -187,7 +185,6 @@
           alert("Bitte Titel und Inhalt eingeben.");
           return;
         }
-
         try {
           const res = await fetch("http://localhost:8000/entries", {
             method: "POST",
@@ -197,13 +194,10 @@
             },
             body: JSON.stringify({ title, content }),
           });
-
           if (!res.ok) {
             if (res.status === 401) alert("Bitte erneut einloggen.");
             return;
           }
-
-          const newEntry = await res.json();
           titleInput.value = "";
           contentInput.value = "";
           loadEntries();
@@ -211,6 +205,32 @@
           console.error(err);
         }
       }
+
+      // **NEUE FUNKTION**
+      async function deleteEntry(id) {
+        if (!confirm("Bist du sicher, dass du diesen Eintrag löschen möchtest?")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`http://localhost:8000/entries/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                if (res.status === 401) alert("Bitte erneut einloggen.");
+                return;
+            }
+
+            loadEntries(); // Liste neu laden, um den gelöschten Eintrag zu entfernen
+        } catch (err) {
+            console.error(err);
+        }
+      }
+
     </script>
   </body>
 </html>
