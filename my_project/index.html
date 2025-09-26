@@ -138,7 +138,7 @@
         const password = document.getElementById("password").value;
 
         try {
-          const res = await fetch("http://localhost:8000/login", {
+          const res = await fetch("https://localhost:8000/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password }),
@@ -162,7 +162,7 @@
 
       async function loadTodos() {
         try {
-          const res = await fetch("http://localhost:8000/todos", {
+          const res = await fetch("https://localhost:8000/todos", {
             headers: { Authorization: "Bearer " + token },
           });
 
@@ -196,7 +196,7 @@
         if (!text) return;
 
         try {
-          const res = await fetch("http://localhost:8000/todos", {
+          const res = await fetch("https://localhost:8000/todos", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -221,7 +221,7 @@
 
       async function toggleTodo(id) {
         try {
-          const res = await fetch(`http://localhost:8000/todos/${id}`, {
+          const res = await fetch(`https://localhost:8000/todos/${id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",

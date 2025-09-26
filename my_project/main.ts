@@ -1,12 +1,12 @@
-import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { Application, Router } from "oak";
 // Wir importieren unsere neuen Deno KV Funktionen
-import { Todo, getTodos, createTodo, updateTodo, deleteTodo } from "./todo.ts";
+import { getTodos, createTodo, updateTodo, deleteTodo } from "./todo.ts";
 import { createJWT, verifyJWT } from "./auth.ts";
 
 const app = new Application();
 const router = new Router();
 
-// CORS und OPTIONS Middleware (bleibt unverändert)
+// CORS und OPTIONS Middleware 
 app.use(async (ctx, next) => {
   ctx.response.headers.set("Access-Control-Allow-Origin", "*");
   ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -19,7 +19,7 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// Auth Middleware (bleibt unverändert)
+// Auth Middleware 
 app.use(async (ctx, next) => {
   if (ctx.request.url.pathname.startsWith("/todos")) {
     const authHeader = ctx.request.headers.get("Authorization");
@@ -45,13 +45,13 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// Logging (bleibt unverändert)
+// Logging 
 app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url}`);
   await next();
 });
 
-// Statische Dateien ausliefern (bleibt unverändert)
+// Statische Dateien ausliefern 
 app.use(async (ctx, next) => {
   try {
     await ctx.send({
@@ -66,21 +66,21 @@ app.use(async (ctx, next) => {
 
 // GET /todos → alle anzeigen
 router.get("/todos", async (ctx) => {
-  const todos = await getTodos(); // Geändert
+  const todos = await getTodos(); 
   ctx.response.body = todos;
 });
 
 // POST /todos → neues ToDo
 router.post("/todos", async (ctx) => {
   const body = await ctx.request.body({ type: "json" }).value;
-  const newTodo = await createTodo(body.title); // Geändert
+  const newTodo = await createTodo(body.title); 
   ctx.response.body = newTodo;
 });
 
 // PUT /todos/:id → ToDo erledigt/unerledigt schalten
 router.put("/todos/:id", async (ctx) => {
-  const { id } = ctx.params; // ID ist jetzt ein String
-  const todo = await updateTodo(id); // Geändert
+  const { id } = ctx.params; 
+  const todo = await updateTodo(id); 
   if (todo) {
     ctx.response.body = todo;
   } else {
@@ -91,12 +91,12 @@ router.put("/todos/:id", async (ctx) => {
 
 // DELETE /todos/:id → ToDo löschen
 router.delete("/todos/:id", async (ctx) => {
-  const { id } = ctx.params; // ID ist jetzt ein String
-  await deleteTodo(id); // Geändert
+  const { id } = ctx.params; 
+  await deleteTodo(id); 
   ctx.response.body = { success: true };
 });
 
-// Login (bleibt unverändert)
+// Login 
 router.post("/login", async (ctx) => {
   const { username, password } = await ctx.request.body({ type: "json" }).value;
   if (username === "admin" && password === "passwort") {
@@ -111,5 +111,9 @@ router.post("/login", async (ctx) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-console.log("Server läuft auf http://localhost:8000");
-await app.listen({ port: 8000 });
+console.log("Server läuft auf https://localhost:8000"); 
+await app.listen({
+  port: 8000,
+  cert: await Deno.readTextFile("./localhost.pem"),
+  key: await Deno.readTextFile("./localhost-key.pem"),
+});

@@ -2,7 +2,7 @@
 const kv = await Deno.openKv();
 
 export interface Todo {
-  id: string; // Die ID ist jetzt ein String (UUID)
+  id: string; 
   title: string;
   done: boolean;
 }
