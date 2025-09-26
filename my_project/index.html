@@ -2,7 +2,7 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <title>ToDo App</title>
+    <title>Digitales Tagebuch</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -17,7 +17,7 @@
       }
 
       .card {
-        max-width: 400px;
+        max-width: 600px;
         margin: 1rem auto;
         padding: 1rem;
         border-radius: 10px;
@@ -25,7 +25,8 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      input {
+      input,
+      textarea {
         width: 95%;
         padding: 0.6rem;
         margin: 0.4rem 0;
@@ -66,28 +67,17 @@
       li:hover {
         background: #ddd;
       }
-
-      li.done {
-        text-decoration: line-through;
-        color: #888;
-        background: #f5f5f5;
-      }
-
-      .todo-input-row {
-        display: flex;
-        gap: 0.5rem;
+      
+      li strong {
+        display: block;
         margin-bottom: 0.5rem;
-      }
-
-      .todo-input-row input {
-        flex: 1;
+        color: #4a148c;
       }
     </style>
   </head>
   <body>
-    <h1>Meine ToDo-Liste</h1>
+    <h1>Digitales Tagebuch</h1>
 
-    <!-- Login -->
     <div id="login" class="card">
       <h2>Login</h2>
       <input type="text" id="username" placeholder="Benutzername" />
@@ -95,14 +85,14 @@
       <button type="button" id="loginBtn">Einloggen</button>
     </div>
 
-    <!-- ToDos -->
-    <div id="todos" class="card" style="display: none">
-      <h2>ToDos</h2>
-      <div class="todo-input-row">
-        <input type="text" id="newTodo" placeholder="Neue Aufgabe..." />
-        <button type="button" id="addTodoBtn">+</button>
-      </div>
-      <ul id="todoList"></ul>
+    <div id="entries" class="card" style="display: none">
+      <h2>Neuer Eintrag</h2>
+      <input type="text" id="newEntryTitle" placeholder="Titel..." />
+      <textarea id="newEntryContent" placeholder="Dein Eintrag..."></textarea>
+      <button type="button" id="addEntryBtn">Speichern</button>
+      <hr />
+      <h2>Deine Einträge</h2>
+      <ul id="entryList"></ul>
     </div>
 
     <script>
@@ -110,15 +100,15 @@
 
       // Elemente referenzieren
       const loginDiv = document.getElementById("login");
-      const todosDiv = document.getElementById("todos");
-      const todoList = document.getElementById("todoList");
+      const entriesDiv = document.getElementById("entries");
+      const entryList = document.getElementById("entryList");
       const loginBtn = document.getElementById("loginBtn");
-      const addTodoBtn = document.getElementById("addTodoBtn");
+      const addEntryBtn = document.getElementById("addEntryBtn");
 
       if (token) {
         loginDiv.style.display = "none";
-        todosDiv.style.display = "block";
-        loadTodos();
+        entriesDiv.style.display = "block";
+        loadEntries();
       }
 
       // Login Button
@@ -127,10 +117,10 @@
         await login();
       });
 
-      // Add Todo Button
-      addTodoBtn.addEventListener("click", async (e) => {
+      // Add Entry Button
+      addEntryBtn.addEventListener("click", async (e) => {
         e.preventDefault();
-        await addTodo();
+        await addEntry();
       });
 
       async function login() {
@@ -149,8 +139,8 @@
             token = data.token;
             localStorage.setItem("jwt", token);
             loginDiv.style.display = "none";
-            todosDiv.style.display = "block";
-            loadTodos();
+            entriesDiv.style.display = "block";
+            loadEntries();
           } else {
             alert("Login fehlgeschlagen");
           }
@@ -160,9 +150,9 @@
         }
       }
 
-      async function loadTodos() {
+      async function loadEntries() {
         try {
-          const res = await fetch("http://localhost:8000/todos", {
+          const res = await fetch("http://localhost:8000/entries", {
             headers: { Authorization: "Bearer " + token },
           });
 
@@ -171,38 +161,41 @@
             return;
           }
 
-          const todos = await res.json();
-          todoList.innerHTML = "";
+          const entries = await res.json();
+          entryList.innerHTML = "";
 
-          todos.forEach((todo) => {
+          entries.forEach((entry) => {
             const li = document.createElement("li");
-            li.textContent = todo.title;
-            if (todo.done) li.classList.add("done");
-
-            li.addEventListener("click", async () => {
-              await toggleTodo(todo.id);
-            });
-
-            todoList.appendChild(li);
+            // **HIER IST DIE ÄNDERUNG:**
+            // Wir erstellen HTML, um Titel und Inhalt anzuzeigen.
+            li.innerHTML = `<strong>${entry.title}</strong><p>${entry.content}</p>`;
+            entryList.appendChild(li);
           });
         } catch (err) {
           console.error(err);
         }
       }
 
-      async function addTodo() {
-        const textInput = document.getElementById("newTodo");
-        const text = textInput.value.trim();
-        if (!text) return;
+      async function addEntry() {
+        const titleInput = document.getElementById("newEntryTitle");
+        const contentInput = document.getElementById("newEntryContent");
+
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+
+        if (!title || !content) {
+          alert("Bitte Titel und Inhalt eingeben.");
+          return;
+        }
 
         try {
-          const res = await fetch("http://localhost:8000/todos", {
+          const res = await fetch("http://localhost:8000/entries", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: "Bearer " + token,
             },
-            body: JSON.stringify({ title: text }),
+            body: JSON.stringify({ title, content }),
           });
 
           if (!res.ok) {
@@ -210,34 +203,10 @@
             return;
           }
 
-          const newTodo = await res.json();
-          textInput.value = "";
-          // neu laden oder nur hinzufügen
-          loadTodos();
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      async function toggleTodo(id) {
-        try {
-          const res = await fetch(`http://localhost:8000/todos/${id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: "Bearer " + token,
-            },
-          });
-
-          if (!res.ok) {
-            const error = await res.text();
-            console.error("Fehler beim Toggle:", res.status, error);
-            if (res.status === 401) alert("Bitte erneut einloggen.");
-            return;
-          }
-
-          await res.json();
-          loadTodos();
+          const newEntry = await res.json();
+          titleInput.value = "";
+          contentInput.value = "";
+          loadEntries();
         } catch (err) {
           console.error(err);
         }

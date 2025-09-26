@@ -1,17 +1,25 @@
+// main.ts
+
 import { Application, Router } from "oak";
 // Wir importieren unsere neuen Deno KV Funktionen
-import { getTodos, createTodo, updateTodo, deleteTodo } from "./todo.ts";
+import { getEntries, createEntry, updateEntry, deleteEntry } from "./entry.ts"; // Umbenannt
 import { createJWT, verifyJWT } from "./auth.ts";
 
 const app = new Application();
 const router = new Router();
 
-// CORS und OPTIONS Middleware 
+// CORS und OPTIONS Middleware
 app.use(async (ctx, next) => {
   ctx.response.headers.set("Access-Control-Allow-Origin", "*");
-  ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  
+  ctx.response.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS",
+  );
+  ctx.response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization",
+  );
+
   if (ctx.request.method === "OPTIONS") {
     ctx.response.status = 204;
     return;
@@ -19,9 +27,9 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// Auth Middleware 
+// Auth Middleware
 app.use(async (ctx, next) => {
-  if (ctx.request.url.pathname.startsWith("/todos")) {
+  if (ctx.request.url.pathname.startsWith("/entries")) { // Geändert zu /entries
     const authHeader = ctx.request.headers.get("Authorization");
 
     if (!authHeader) {
@@ -45,13 +53,13 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// Logging 
+// Logging
 app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url}`);
   await next();
 });
 
-// Statische Dateien ausliefern 
+// Statische Dateien ausliefern
 app.use(async (ctx, next) => {
   try {
     await ctx.send({
@@ -63,42 +71,43 @@ app.use(async (ctx, next) => {
   }
 });
 
-
-// GET /todos → alle anzeigen
-router.get("/todos", async (ctx) => {
-  const todos = await getTodos(); 
-  ctx.response.body = todos;
+// GET /entries → alle anzeigen
+router.get("/entries", async (ctx) => {
+  const entries = await getEntries();
+  ctx.response.body = entries;
 });
 
-// POST /todos → neues ToDo
-router.post("/todos", async (ctx) => {
+// POST /entries → neuer Eintrag
+router.post("/entries", async (ctx) => {
   const body = await ctx.request.body({ type: "json" }).value;
-  const newTodo = await createTodo(body.title); 
-  ctx.response.body = newTodo;
+  const newEntry = await createEntry(body.title, body.content);
+  ctx.response.body = newEntry;
 });
 
-// PUT /todos/:id → ToDo erledigt/unerledigt schalten
-router.put("/todos/:id", async (ctx) => {
-  const { id } = ctx.params; 
-  const todo = await updateTodo(id); 
-  if (todo) {
-    ctx.response.body = todo;
+// PUT /entries/:id → Eintrag aktualisieren
+router.put("/entries/:id", async (ctx) => {
+  const { id } = ctx.params;
+  const body = await ctx.request.body({ type: "json" }).value;
+  const entry = await updateEntry(id, body.title, body.content);
+  if (entry) {
+    ctx.response.body = entry;
   } else {
     ctx.response.status = 404;
-    ctx.response.body = { error: "Todo nicht gefunden" };
+    ctx.response.body = { error: "Eintrag nicht gefunden" };
   }
 });
 
-// DELETE /todos/:id → ToDo löschen
-router.delete("/todos/:id", async (ctx) => {
-  const { id } = ctx.params; 
-  await deleteTodo(id); 
+// DELETE /entries/:id → Eintrag löschen
+router.delete("/entries/:id", async (ctx) => {
+  const { id } = ctx.params;
+  await deleteEntry(id);
   ctx.response.body = { success: true };
 });
 
-// Login 
+// Login
 router.post("/login", async (ctx) => {
-  const { username, password } = await ctx.request.body({ type: "json" }).value;
+  const { username, password } = await ctx.request.body({ type: "json" })
+    .value;
   if (username === "admin" && password === "passwort") {
     const token = await createJWT({ username });
     ctx.response.body = { token };
@@ -114,6 +123,7 @@ app.use(router.allowedMethods());
 // HTTP Server starten
 console.log("Server läuft auf http://localhost:8000");
 await app.listen({ port: 8000 });
+
 
 /* HTTPS Server starten 
 
